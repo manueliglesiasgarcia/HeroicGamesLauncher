@@ -49,6 +49,10 @@ import { spawn } from 'child_process'
 import shlex from 'shlex'
 import { isOnline } from './online_monitor'
 import { showDialogBoxModalAuto } from './dialog/dialog'
+import {
+  WorkaroundSettings,
+  WorkaroundSettingsClass
+} from './workarounds/workarounds'
 
 async function prepareLaunch(
   gameSettings: GameSettings,
@@ -141,12 +145,15 @@ async function prepareLaunch(
     offlineMode
   }
 }
-
-async function prepareWineLaunch(game: LegendaryGame | GOGGame): Promise<{
+async function prepareWineLaunch(
+  game: LegendaryGame | GOGGame,
+  workAroundSettings: WorkaroundSettings
+): Promise<{
   success: boolean
   failureReason?: string
   envVars?: Record<string, string>
 }> {
+  const workaroundSettings = workAroundSettings
   const gameSettings =
     GameConfig.get(game.appName).config ||
     (await GameConfig.get(game.appName).getSettings())
@@ -200,7 +207,11 @@ async function prepareWineLaunch(game: LegendaryGame | GOGGame): Promise<{
 
   // If DXVK/VKD3D installation is enabled, install it
   if (gameSettings.wineVersion.type === 'wine') {
-    if (gameSettings.autoInstallDxvk) {
+    if (
+      gameSettings.autoInstallDxvk &&
+      workaroundSettings.dxvk_required &&
+      !workaroundSettings.wined3d_required
+    ) {
       await DXVK.installRemove(
         gameSettings.winePrefix,
         gameSettings.wineVersion.bin,
@@ -208,7 +219,11 @@ async function prepareWineLaunch(game: LegendaryGame | GOGGame): Promise<{
         'backup'
       )
     }
-    if (gameSettings.autoInstallVkd3d) {
+    if (
+      gameSettings.autoInstallVkd3d &&
+      workaroundSettings.vkd3d_proton_required &&
+      !workaroundSettings.wined3d_required
+    ) {
       await DXVK.installRemove(
         gameSettings.winePrefix,
         gameSettings.wineVersion.bin,
@@ -218,8 +233,11 @@ async function prepareWineLaunch(game: LegendaryGame | GOGGame): Promise<{
     }
   }
 
-  const { folder_name: installFolderName } = game.getGameInfo()
-  const envVars = setupWineEnvVars(gameSettings, installFolderName)
+  const envVars = setupWineEnvVars(
+    gameSettings,
+    game.appName,
+    workaroundSettings
+  )
 
   return { success: true, envVars: envVars }
 }
@@ -229,16 +247,26 @@ async function prepareWineLaunch(game: LegendaryGame | GOGGame): Promise<{
  * @param gameSettings The GameSettings to get the environment variables for
  * @returns A big string of environment variables, structured key=value
  */
-function setupEnvVars(gameSettings: GameSettings) {
+function setupEnvVars(
+  gameSettings: GameSettings,
+  workaroundSettings: WorkaroundSettings
+) {
   const ret: Record<string, string> = {}
   if (gameSettings.nvidiaPrime) {
     ret.DRI_PRIME = '1'
     ret.__NV_PRIME_RENDER_OFFLOAD = '1'
     ret.__GLX_VENDOR_LIBRARY_NAME = 'nvidia'
   }
-
+  if (gameSettings.audioFix) {
+    ret.PULSE_LATENCY_MSEC = '60'
+  }
   if (gameSettings.enviromentOptions) {
     gameSettings.enviromentOptions.forEach((envEntry: EnviromentVariable) => {
+      ret[envEntry.key] = removeQuoteIfNecessary(envEntry.value)
+    })
+  }
+  if (workaroundSettings.env_var) {
+    workaroundSettings.env_var.forEach((envEntry) => {
       ret[envEntry.key] = removeQuoteIfNecessary(envEntry.value)
     })
   }
@@ -259,7 +287,11 @@ function setupEnvVars(gameSettings: GameSettings) {
  * @param gameId If Proton and the Steam Runtime are used, the SteamGameId variable will be set to `heroic-gameId`
  * @returns A Record that can be passed to execAsync/spawn
  */
-function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
+function setupWineEnvVars(
+  gameSettings: GameSettings,
+  gameId = '0',
+  workaroundSettings: WorkaroundSettings
+) {
   const { wineVersion, winePrefix, wineCrossoverBottle } = gameSettings
 
   const ret: Record<string, string> = {}
@@ -289,27 +321,51 @@ function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
     ret.WINE_FULLSCREEN_FSR_STRENGTH =
       gameSettings.maxSharpness?.toString() || '2'
   }
-  if (gameSettings.enableEsync && wineVersion.type !== 'proton') {
+  if (
+    gameSettings.wineVersion.type === 'proton' &&
+    workaroundSettings.wined3d_required
+  ) {
+    ret.PROTON_USE_WINED3D = '1'
+  }
+
+  if (
+    gameSettings.enableEsync &&
+    workaroundSettings.esync_enable &&
+    wineVersion.type !== 'proton'
+  ) {
     ret.WINEESYNC = '1'
   }
-  if (!gameSettings.enableEsync && wineVersion.type === 'proton') {
+  if (
+    !gameSettings.enableEsync &&
+    !workaroundSettings.esync_enable &&
+    wineVersion.type === 'proton'
+  ) {
     ret.PROTON_NO_ESYNC = '1'
   }
-  if (gameSettings.enableFsync && wineVersion.type !== 'proton') {
+  if (
+    gameSettings.enableFsync &&
+    workaroundSettings.fsync_enable &&
+    wineVersion.type !== 'proton'
+  ) {
     ret.WINEFSYNC = '1'
   }
-  if (!gameSettings.enableFsync && wineVersion.type === 'proton') {
+  if (
+    !gameSettings.enableFsync &&
+    !workaroundSettings.fsync_enable &&
+    wineVersion.type === 'proton'
+  ) {
     ret.PROTON_NO_FSYNC = '1'
   }
-  if (gameSettings.eacRuntime) {
+
+  if (gameSettings.eacRuntime || workaroundSettings.eac_enable) {
     ret.PROTON_EAC_RUNTIME = join(runtimePath, 'eac_runtime')
   }
-  if (gameSettings.battlEyeRuntime) {
+  if (gameSettings.battlEyeRuntime || workaroundSettings.battleye_enable) {
     ret.PROTON_BATTLEYE_RUNTIME = join(runtimePath, 'battleye_runtime')
   }
   if (wineVersion.type === 'proton') {
     // If we don't set this, GE-Proton tries to guess the AppID from the prefix path, which doesn't work in our case
-    ret.STEAM_COMPAT_APP_ID = '0'
+    ret.STEAM_COMPAT_APP_ID = `heroic-${gameId}`
     ret.SteamAppId = ret.STEAM_COMPAT_APP_ID
     // This sets the name of the log file given when setting PROTON_LOG=1
     ret.SteamGameId = `heroic-${gameId}`
@@ -438,6 +494,7 @@ export async function verifyWinePrefix(
   settings: GameSettings
 ): Promise<{ res: ExecResult; updated: boolean }> {
   const { winePrefix, wineVersion } = settings
+  const workaround = new WorkaroundSettingsClass('default', 'legendary')
 
   if (!(await validWine(wineVersion))) {
     return { res: { stdout: '', stderr: '' }, updated: false }
@@ -462,6 +519,7 @@ export async function verifyWinePrefix(
     commandParts: ['wineboot', '--init'],
     wait: haveToWait,
     gameSettings: settings,
+    workaroundSettings: workaround,
     skipPrefixCheckIKnowWhatImDoing: true
   })
 
@@ -494,6 +552,7 @@ async function runWineCommand({
   wait,
   protonVerb = 'run',
   installFolderName,
+  workaroundSettings,
   options,
   startFolder,
   skipPrefixCheckIKnowWhatImDoing = false
@@ -541,8 +600,8 @@ async function runWineCommand({
 
   const env_vars = {
     ...process.env,
-    ...setupEnvVars(settings),
-    ...setupWineEnvVars(settings, installFolderName)
+    ...setupEnvVars(settings, workaroundSettings!),
+    ...setupWineEnvVars(settings, installFolderName, workaroundSettings!)
   }
 
   const isProton = wineVersion.type === 'proton'

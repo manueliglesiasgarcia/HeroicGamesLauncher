@@ -1,3 +1,4 @@
+import { WorkaroundSettingsClass } from './../workarounds/workarounds'
 import {
   GameSettings,
   GameInfo,
@@ -149,7 +150,12 @@ export async function launchApp(appName: string): Promise<boolean> {
       })
       return false
     }
-    const env = { ...process.env, ...setupEnvVars(gameSettings) }
+    const workaround = new WorkaroundSettingsClass(appName, 'sideload')
+    const workaroundSettings = await workaround.readWorkaround()
+    const env = {
+      ...process.env,
+      ...setupEnvVars(gameSettings, workaroundSettings)
+    }
 
     // Native
     if (isNativeApp(appName)) {

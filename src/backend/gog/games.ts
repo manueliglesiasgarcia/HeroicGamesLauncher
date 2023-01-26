@@ -55,6 +55,7 @@ import {
 } from 'common/types/gog'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
+import { WorkaroundSettingsClass } from '../workarounds/workarounds'
 
 class GOGGame extends Game {
   public appName: string
@@ -125,6 +126,13 @@ class GOGGame extends Game {
     }
     return info
   }
+  public async parseWorkaround() {
+    const gameInfo = this.getGameInfo()
+    const obj = new WorkaroundSettingsClass(this.appName, gameInfo.runner)
+    const workaroundSettings = await obj.readWorkaround()
+    return workaroundSettings
+  }
+
   async getSettings(): Promise<GameSettings> {
     return (
       GameConfig.get(this.appName).config ||
@@ -354,6 +362,9 @@ class GOGGame extends Game {
   async launch(launchArguments?: string): Promise<boolean> {
     const gameSettings = await this.getSettings()
     const gameInfo = this.getGameInfo()
+    const obj = new WorkaroundSettingsClass(this.appName, gameInfo.runner)
+    const workaroundSettings = await this.parseWorkaround()
+    const overrideExe = await obj.getOverwriteExe(this.getGameInfo())
 
     if (
       !gameInfo.install ||
@@ -393,13 +404,12 @@ class GOGGame extends Game {
       return false
     }
 
-    const exeOverrideFlag = gameSettings.targetExe
-      ? ['--override-exe', gameSettings.targetExe]
-      : []
+    const override_exe = gameSettings.targetExe || overrideExe
+    const exeOverrideFlag = override_exe ? ['--override-exe', override_exe] : []
 
     let commandEnv = isWindows
       ? process.env
-      : { ...process.env, ...setupEnvVars(gameSettings) }
+      : { ...process.env, ...setupEnvVars(gameSettings, workaroundSettings) }
     const wineFlag: string[] = []
 
     if (!this.isNative()) {
@@ -407,7 +417,7 @@ class GOGGame extends Game {
         success: wineLaunchPrepSuccess,
         failureReason: wineLaunchPrepFailReason,
         envVars: wineEnvVars
-      } = await prepareWineLaunch(this)
+      } = await prepareWineLaunch(this, workaroundSettings)
       if (!wineLaunchPrepSuccess) {
         appendFileSync(
           this.logFileLocation,
@@ -452,7 +462,8 @@ class GOGGame extends Game {
       '--platform',
       gameInfo.install.platform.toLowerCase(),
       ...shlex.split(launchArguments ?? ''),
-      ...shlex.split(gameSettings.launcherArgs ?? '')
+      ...shlex.split(gameSettings.launcherArgs ?? ''),
+      ...shlex.split(workaroundSettings.start_params ?? '')
     ]
     const wrappers = setupWrappers(
       gameSettings,
@@ -471,6 +482,10 @@ class GOGGame extends Game {
       this.logFileLocation,
       `Launch Command: ${fullCommand}\n\nGame Log:\n`
     )
+
+    if (isLinux) {
+      await workaroundSettings.executeWorkaround(this)
+    }
 
     const { error, abort } = await runGogdlCommand(
       commandParts,
@@ -816,6 +831,7 @@ class GOGGame extends Game {
     wait = false,
     protonVerb?: ProtonVerb
   ): Promise<ExecResult> {
+    const workaroundSettings = await this.parseWorkaround()
     if (this.isNative()) {
       logError('runWineCommand called on native game!', {
         prefix: LogPrefix.Gog
@@ -830,7 +846,8 @@ class GOGGame extends Game {
       installFolderName: folder_name,
       commandParts,
       wait,
-      protonVerb
+      protonVerb,
+      workaroundSettings
     })
   }
 

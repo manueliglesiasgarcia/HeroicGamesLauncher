@@ -258,6 +258,30 @@ export default function SidebarLinks() {
                 <span>{t('settings.navbar.sync')}</span>
               </NavLink>
             )}
+
+            {!isDefaultSetting && isLinux && (
+              <NavLink
+                role="link"
+                to={`/settings/${runner}/${appName}/workaround`}
+                state={{ ...state, runner: state?.runner }}
+                className={classNames('Sidebar__item SidebarLinks__subItem', {
+                  ['active']: type === 'workaround'
+                })}
+              >
+                <span>{t('settings.navbar.workaround')}</span>
+              </NavLink>
+            )}
+            <NavLink
+              role="link"
+              to={`/settings/${runner}/${appName}/other`}
+              state={{ ...state, runner: state?.runner }}
+              className={classNames('Sidebar__item SidebarLinks__subItem', {
+                ['active']: type === 'other'
+              })}
+            >
+              <span>{t('settings.navbar.other')}</span>
+            </NavLink>
+
             {isDefaultSetting && (
               <NavLink
                 role="link"

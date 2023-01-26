@@ -223,7 +223,8 @@ export const Winetricks = {
   run: async (
     wineVersion: WineInstallation,
     baseWinePrefix: string,
-    event: Electron.IpcMainInvokeEvent
+    tweak: string,
+    event?: Electron.IpcMainInvokeEvent
   ) => {
     if (!(await validWine(wineVersion))) {
       return
@@ -258,17 +259,17 @@ export const Winetricks = {
       }
       const sendProgress = setInterval(() => {
         if (progressUpdated) {
-          event.sender.send('progressOfWinetricks', executeMessages)
+          event!.sender.send('progressOfWinetricks', executeMessages)
           progressUpdated = false
         }
       }, 1000)
 
       logInfo(
-        `Running WINEPREFIX='${winePrefix}' PATH='${winepath}':$PATH ${winetricks} -q`,
+        `Running WINEPREFIX='${winePrefix}' PATH='${winepath}':$PATH ${winetricks} -q ${tweak}`,
         { prefix: LogPrefix.WineTricks }
       )
 
-      const child = spawn(winetricks, ['-q'], { env: envs })
+      const child = spawn(winetricks, ['-q', `${tweak}`], { env: envs })
 
       child.stdout.setEncoding('utf8')
       child.stdout.on('data', (data: string) => {

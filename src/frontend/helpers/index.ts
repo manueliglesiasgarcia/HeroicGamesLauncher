@@ -86,6 +86,19 @@ const getGameSettings = async (
   return window.api.getGameSettings(appName, runner)
 }
 
+const listWorkarounds = async (appName: string, runner: Runner) => {
+  return window.api.listWorkarounds(appName, runner)
+}
+
+const executeWorkaround = async (
+  appName: string,
+  runner: Runner,
+  name: string,
+  force: boolean
+): Promise<boolean> => {
+  return window.api.executeWorkaround(appName, runner, name, force)
+}
+
 const getInstallInfo = async (
   appName: string,
   runner: Runner,
@@ -128,6 +141,8 @@ export {
   createNewWindow,
   getGameInfo,
   getGameSettings,
+  listWorkarounds,
+  executeWorkaround,
   getInstallInfo,
   getLegendaryConfig,
   getPlatform,

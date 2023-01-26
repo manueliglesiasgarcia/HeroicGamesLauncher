@@ -14,6 +14,7 @@ import {
   GeneralSettings,
   GamesSettings,
   SyncSaves,
+  Workarounds,
   AdvancedSettings
 } from './sections'
 import { AppSettings, WineInstallation } from 'common/types'
@@ -41,6 +42,7 @@ function Settings() {
   const { appName = '', type = '' } = useParams()
   const isDefault = appName === 'default'
   const isGeneralSettings = type === 'general'
+  const isWorkaroundSettings = type === 'workaround'
   const isSyncSettings = type === 'sync'
   const isGamesSettings = type === 'games_settings'
   const isLogSettings = type === 'log'
@@ -147,6 +149,7 @@ function Settings() {
             {isGeneralSettings && <GeneralSettings />}
             {isGamesSettings && <GamesSettings />}
             {isSyncSettings && <SyncSaves />}
+            {isWorkaroundSettings && <Workarounds />}
             {isAdvancedSetting && <AdvancedSettings />}
             {isLogSettings && <LogSettings />}
             <FooterInfo />

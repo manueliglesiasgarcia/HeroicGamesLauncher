@@ -1,3 +1,4 @@
+import { WorkaroundSettings } from '../backend/workarounds/workarounds'
 import { GOGCloudSavesLocation, GogInstallPlatform } from './types/gog'
 import { LegendaryInstallPlatform } from './types/legendary'
 import { VersionInfo } from 'heroic-wine-downloader'
@@ -45,6 +46,12 @@ export interface AppSettings extends GameSettings {
   addSteamShortcuts: boolean
   altLegendaryBin: string
   altGogdlBin: string
+  audioFix: boolean
+  autoInstallDxvk: boolean
+  autoInstallVkd3d: boolean
+  preferSystemLibs: boolean
+  autoSyncSaves: boolean
+  battlEyeRuntime: boolean
   checkForUpdatesOnStartup: boolean
   customWinePaths: string[]
   darkTrayIcon: boolean
@@ -52,16 +59,38 @@ export interface AppSettings extends GameSettings {
   defaultSteamPath: string
   disableController: boolean
   discordRPC: boolean
+  eacRuntime: boolean
   downloadNoHttps: boolean
   egsLinkedPath: string
   exitToTray: boolean
+  enableEsync: boolean
+  enableFSR: boolean
+  enableFsync: boolean
+  language: string
+  launcherArgs: string
   libraryTopSection: LibraryTopSectionOptions
   maxRecentGames: number
+  maxSharpness?: number
   maxWorkers: number
   minimizeOnLaunch: boolean
+  nvidiaPrime: boolean
+  offlineMode: boolean
+  otherOptions?: string //depricated
+  enviromentOptions: EnviromentVariable[]
+  wrapperOptions: WrapperVariable[]
+  savesPath: string
+  showFps: boolean
+  showMangohud: boolean
   startInTray: boolean
+  useGameMode: boolean
+  targetExe: string
   userInfo: UserInfo
+  wineCrossoverBottle: string
+  winePrefix: string
   defaultWinePrefix: string
+  wineVersion: WineInstallation
+  useSteamRuntime: boolean
+  gogSaves?: GOGCloudSavesLocation[]
   customThemesPath: string
   hideChangelogsOnStartup: boolean
 }
@@ -112,6 +141,7 @@ export interface GameInfo {
   is_linux_native: boolean
 }
 export interface GameSettings {
+  audioFix: boolean
   autoInstallDxvk: boolean
   autoInstallVkd3d: boolean
   preferSystemLibs: boolean
@@ -537,6 +567,7 @@ export type WineCommandArgs = {
   commandParts: string[]
   wait: boolean
   protonVerb?: ProtonVerb
+  workaroundSettings?: WorkaroundSettings
   gameSettings?: GameSettings
   installFolderName?: string
   options?: CallRunnerOptions

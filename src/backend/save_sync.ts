@@ -1,6 +1,6 @@
 import { Runner } from 'common/types'
 import { GOGCloudSavesLocation, SaveFolderVariable } from 'common/types/gog'
-import { getWinePath, setupWineEnvVars, verifyWinePrefix } from './launcher'
+import { getWinePath, verifyWinePrefix } from './launcher'
 import { runLegendaryCommand, LegendaryLibrary } from './legendary/library'
 import { GOGLibrary } from './gog/library'
 import {
@@ -83,8 +83,8 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
     ],
     createAbortController(abortControllerName),
     {
-      logMessagePrefix: 'Getting default save path',
-      env: setupWineEnvVars(await game.getSettings())
+      logMessagePrefix: 'Getting default save path'
+      // env: setupWineEnvVars(await game.getSettings(),installFolderName!, workaroundSettings!)
     }
   )
   deleteAbortController(abortControllerName)

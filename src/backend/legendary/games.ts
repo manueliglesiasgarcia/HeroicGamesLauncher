@@ -49,6 +49,7 @@ import { t } from 'i18next'
 import { isOnline } from '../online_monitor'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
 import { gameAnticheatInfo } from '../anticheat/utils'
+import { WorkaroundSettingsClass } from '../workarounds/workarounds'
 
 class LegendaryGame extends Game {
   public appName: string
@@ -206,6 +207,12 @@ class LegendaryGame extends Game {
     }
   }
 
+  public async parseWorkaround() {
+    const gameInfo = this.getGameInfo()
+    const obj = new WorkaroundSettingsClass(this.appName, gameInfo.runner)
+    const workaroundSettings = await obj.readWorkaround()
+    return workaroundSettings
+  }
   /**
    * Alias for `GameConfig.get(this.appName).config`
    * If it doesn't exist, uses getSettings() instead.
@@ -623,7 +630,6 @@ class LegendaryGame extends Game {
     if (!existsSync(legendarySavesPath)) {
       mkdirSync(legendarySavesPath, { recursive: true })
     }
-
     const commandParts = [
       'sync-saves',
       arg,
@@ -656,6 +662,9 @@ class LegendaryGame extends Game {
   public async launch(launchArguments: string): Promise<boolean> {
     const gameSettings = await this.getSettings()
     const gameInfo = this.getGameInfo()
+    const obj = new WorkaroundSettingsClass(this.appName, gameInfo.runner)
+    const workaroundSettings = await obj.readWorkaround()
+    const overrideExe = await obj.getOverwriteExe(this.getGameInfo())
 
     const {
       success: launchPrepSuccess,
@@ -679,10 +688,9 @@ class LegendaryGame extends Game {
       return false
     }
 
-    const offlineFlag = offlineMode ? ['--offline'] : []
-    const exeOverrideFlag = gameSettings.targetExe
-      ? ['--override-exe', gameSettings.targetExe]
-      : []
+    const offlineFlag = offlineMode ? '--offline' : ''
+    const override_exe = gameSettings.targetExe || overrideExe
+    const exeOverrideFlag = override_exe ? ['--override-exe', override_exe] : []
 
     const languageCode =
       gameSettings.language || (configStore.get('language', '') as string)
@@ -690,7 +698,7 @@ class LegendaryGame extends Game {
 
     let commandEnv = isWindows
       ? process.env
-      : { ...process.env, ...setupEnvVars(gameSettings) }
+      : { ...process.env, ...setupEnvVars(gameSettings, workaroundSettings) }
     const wineFlag: string[] = []
     if (!this.isNative()) {
       // -> We're using Wine/Proton on Linux or CX on Mac
@@ -698,7 +706,7 @@ class LegendaryGame extends Game {
         success: wineLaunchPrepSuccess,
         failureReason: wineLaunchPrepFailReason,
         envVars: wineEnvVars
-      } = await prepareWineLaunch(this)
+      } = await prepareWineLaunch(this, workaroundSettings)
       if (!wineLaunchPrepSuccess) {
         appendFileSync(
           this.logFileLocation,
@@ -759,7 +767,8 @@ class LegendaryGame extends Game {
       ...offlineFlag,
       ...wineFlag,
       ...shlex.split(launchArguments ?? ''),
-      ...shlex.split(gameSettings.launcherArgs ?? '')
+      ...shlex.split(gameSettings.launcherArgs ?? ''),
+      ...shlex.split(workaroundSettings.start_params ?? '')
     ]
     const wrappers = setupWrappers(
       gameSettings,
@@ -778,6 +787,10 @@ class LegendaryGame extends Game {
       this.logFileLocation,
       `Launch Command: ${fullCommand}\n\nGame Log:\n`
     )
+
+    if (isLinux) {
+      await obj.executeWorkaround(this)
+    }
 
     const { error } = await runLegendaryCommand(
       commandParts,
@@ -808,9 +821,9 @@ class LegendaryGame extends Game {
   }
 
   public async runWineCommand(
-    commandParts: string[],
+    command: string,
     wait = false,
-    protonVerb?: ProtonVerb
+    forceRunInPrefixVerb = false
   ): Promise<ExecResult> {
     if (this.isNative()) {
       logError('runWineCommand called on native game!', {
@@ -818,6 +831,7 @@ class LegendaryGame extends Game {
       })
       return { stdout: '', stderr: '' }
     }
+    const workaroundSettings = await this.parseWorkaround()
 
     const { folder_name } = this.getGameInfo()
     const gameSettings = await this.getSettings()
@@ -827,7 +841,8 @@ class LegendaryGame extends Game {
       installFolderName: folder_name,
       commandParts,
       wait,
-      protonVerb
+      protonVerb,
+      workaroundSettings
     })
   }
 

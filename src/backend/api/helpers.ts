@@ -70,6 +70,14 @@ export const getGameSettings = async (
   runner: Runner
 ): Promise<GameSettings | null> =>
   ipcRenderer.invoke('getGameSettings', appName, runner)
+export const listWorkarounds = async (appName: string, runner: Runner) =>
+  ipcRenderer.invoke('listWorkarounds', appName, runner)
+export const executeWorkaround = async (
+  appName: string,
+  runner: Runner,
+  name: string,
+  force: boolean
+) => ipcRenderer.invoke('executeWorkaround', appName, runner, name, force)
 
 export const getInstallInfo = async (
   appName: string,

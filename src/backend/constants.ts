@@ -42,10 +42,15 @@ const configFolder = app.getPath('appData')
 const legendaryConfigPath = isLinux
   ? join(configFolder, 'legendary')
   : join(userHome, '.config', 'legendary')
+const installedVersionPath = join(legendaryConfigPath, 'overlay_install.json')
+const currentVersionPath = join(legendaryConfigPath, 'overlay_version.json')
 const heroicFolder = join(configFolder, 'heroic')
 const heroicConfigPath = join(heroicFolder, 'config.json')
+const heroicWorkaroundPath = join(heroicFolder, 'Workarounds')
 const heroicGamesConfigPath = join(heroicFolder, 'GamesConfig')
 const heroicToolsPath = join(heroicFolder, 'tools')
+const defaultInstallPath = join(heroicToolsPath, 'eos_overlay')
+const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
 const heroicIconFolder = join(heroicFolder, 'icons')
 const runtimePath = join(heroicToolsPath, 'runtimes')
 const userInfo = join(legendaryConfigPath, 'user.json')
@@ -179,6 +184,10 @@ export {
   currentGameConfigVersion,
   currentGlobalConfigVersion,
   currentLogFile,
+  installedVersionPath,
+  currentVersionPath,
+  defaultInstallPath,
+  eosOverlayAppName,
   lastLogFile,
   discordLink,
   execOptions,
@@ -186,6 +195,7 @@ export {
   getShell,
   configStore,
   heroicConfigPath,
+  heroicWorkaroundPath,
   heroicFolder,
   heroicGamesConfigPath,
   heroicGithubURL,

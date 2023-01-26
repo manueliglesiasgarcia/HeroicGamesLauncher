@@ -116,6 +116,16 @@ interface AsyncIPCFunctions {
     appName: string,
     runner: Runner
   ) => Promise<GameSettings | null>
+  listWorkarounds: (
+    appName: string,
+    runner: Runner
+  ) => Promise<GameSettings | null>
+  executeWorkaround: (
+    appName: string,
+    runner: Runner,
+    name: string,
+    force: boolean
+  ) => Promise<Void | null>
   getGOGLinuxInstallersLangs: (appName: string) => Promise<string[]>
   getInstallInfo: (
     appName: string,
