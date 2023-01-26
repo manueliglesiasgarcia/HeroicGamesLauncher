@@ -19,6 +19,7 @@ import {
 } from '../legendary/eos_overlay/eos_overlay'
 import { Game } from 'backend/games'
 import { download } from '../wine/runtimes/runtimes'
+import { getGame } from 'backend/utils'
 
 export type regeditType =
   | 'REG_BINARY'
@@ -373,8 +374,14 @@ class WorkaroundSettingsClass {
   /**
    * Execute all workarounds before the game boots
    */
-  public async executeWorkaround(game: Game, name = 'default', force = false) {
+  public async executeWorkaround(
+    appname: string,
+    runner: Runner,
+    name = 'default',
+    force = false
+  ) {
     const json_workaround = await this.readWorkaround(name)
+    const game = getGame(appname, runner)
     if (!json_workaround.executed || force) {
       logInfo(`Executing workaround`, {
         prefix: LogPrefix.Backend

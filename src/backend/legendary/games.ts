@@ -789,7 +789,7 @@ class LegendaryGame extends Game {
     )
 
     if (isLinux) {
-      await obj.executeWorkaround(this)
+      await obj.executeWorkaround(this.appName, gameInfo.runner)
     }
 
     const { error } = await runLegendaryCommand(
@@ -821,9 +821,9 @@ class LegendaryGame extends Game {
   }
 
   public async runWineCommand(
-    command: string,
+    commandParts: string[],
     wait = false,
-    forceRunInPrefixVerb = false
+    protonVerb?: ProtonVerb
   ): Promise<ExecResult> {
     if (this.isNative()) {
       logError('runWineCommand called on native game!', {

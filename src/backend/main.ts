@@ -697,7 +697,7 @@ ipcMain.handle('callTool', async (event, { tool, exe, appName, runner }) => {
   switch (tool) {
     case 'winetricks':
       await verifyWinePrefix(gameSettings)
-      await Winetricks.run(wineVersion, winePrefix, event)
+      await Winetricks.run(wineVersion, winePrefix, '', event)
       break
     case 'winecfg':
       isSideloaded
@@ -1596,6 +1596,7 @@ import './wine/runtimes/ipc_handler'
 import './downloadmanager/ipc_handler'
 import './utils/ipc_handler'
 import './howlongtobeat/ipc_handler'
+import './workarounds/ipc_handler'
 
 // import Store from 'electron-store'
 // interface StoreMap {
