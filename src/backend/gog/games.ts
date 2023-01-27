@@ -484,7 +484,7 @@ class GOGGame extends Game {
     )
 
     if (isLinux) {
-      await workaroundSettings.executeWorkaround(this)
+      await workaroundSettings.executeWorkaround(this.appName, gameInfo.runner)
     }
 
     const { error, abort } = await runGogdlCommand(
